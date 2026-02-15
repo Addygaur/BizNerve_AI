@@ -20,4 +20,4 @@ requirements.md – Functional requirements & product scope
 
 design.md – System design & architecture
 
-architecture/biznerve-ai-architecture-clean.png.png – AWS architecture diagrams
+architecture/biznerve-ai-architecture-clean.png.png – AWS architecture diagram
