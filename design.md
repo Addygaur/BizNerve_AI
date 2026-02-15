@@ -1,4 +1,4 @@
-# BizNerve AI - Design Document (Prototype Version)
+# BizNerve AI - Design Document
 
 ## Overview
 
