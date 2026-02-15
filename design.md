@@ -457,8 +457,6 @@ CREATE TABLE alerts (
 
 ### AWS Cloud Architecture
 
-The application is deployed on AWS with the following architecture:
-
 ![AWS Architecture Diagram](architecture/biznerve-ai-architecture-clean.png.png)
 
 ### System Components
