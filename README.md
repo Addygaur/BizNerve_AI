@@ -12,7 +12,7 @@ BizNerve AI helps shop owners:
 
 💡 Take clear, actionable business decisions
 
-Built using AWS cloud infrastructure and Prophet time-series forecasting.
+Proposed architecture uses AWS cloud infrastructure and Prophet time-series forecasting.
 
 📁 Documentation
 
