@@ -4,9 +4,9 @@ AI-powered retail risk monitoring system designed for small and medium retail bu
 
 BizNerve AI helps shop owners:
 
-🔮 Predict product demand (30-day forecasting)
+🔮 Predict product demand 
 
-📊 Detect mid-month revenue risk (Day 10 & 20 projection)
+📊 Detect mid-month revenue risk 
 
 💰 Monitor monthly margin decline
 
