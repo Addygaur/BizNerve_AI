@@ -1,0 +1,4 @@
+sku,name,category,supplier_id,cost_price,selling_price,supplier_lead_time_days
+SKU-001,Blue Denim Shirt,Apparel,SUP-1,450,799,7
+SKU-002,Running Shoes,Footwear,SUP-2,1200,1999,10
+SKU-003,Face Wash,Cosmetics,SUP-3,80,149,5

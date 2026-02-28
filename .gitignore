@@ -1,0 +1,6 @@
+.history
+.DS_Store
+backend/api/node_modules
+backend/api/.vite
+backend/.env
+__pycache__

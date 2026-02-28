@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-biznerve}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-biznerve}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  ai:
+    build:
+      context: ./ai
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: ./api
+    environment:
+      API_PORT: ${API_PORT:-8080}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/biznerve}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8000}
+      MONTHLY_REVENUE_TARGET: 1500000
+      UPLOAD_LIMIT_MB: ${UPLOAD_LIMIT_MB:-10}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      ai:
+        condition: service_healthy
+
+volumes:
+  pg_data:
