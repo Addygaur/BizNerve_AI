@@ -21,3 +21,8 @@ requirements.md – Functional requirements & product scope
 design.md – System design & architecture
 
 architecture/biznerve-ai-architecture-clean.png.png – AWS architecture diagram
+
+**Run the app**
+
+- **Backend:** `cd backend && docker compose up -d` (API at http://localhost:8080)
+- **Frontend:** `cd frontend && npm install && npm run dev` (UI at http://localhost:5173). Upload products/inventory/sales CSVs, run analysis, view priority alerts.

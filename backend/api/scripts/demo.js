@@ -79,7 +79,9 @@ function formatRupeesShort(value) {
 
 function printAlert(alert, index) {
   console.log(`\n#${index + 1} ${alert.alert_type} [${alert.severity}]`);
-  if (alert.sku) console.log(`SKU: ${alert.sku}`);
+  if (alert.sku) {
+    console.log(`SKU: ${alert.sku}${alert.product_name ? ` | Product: ${alert.product_name}` : ""}`);
+  }
   console.log(`Impact: ${formatRupeesShort(alert.estimated_impact)}`);
   console.log(`Urgency Days: ${alert.urgency_days}`);
   console.log(`Action: ${alert.recommended_action}`);
@@ -92,10 +94,15 @@ async function main() {
     );
   }
 
-  const demoDir = path.resolve(__dirname, "../../samples/demo");
-  const productsPath = path.join(demoDir, "products_demo.csv");
-  const inventoryPath = path.join(demoDir, "inventory_demo.csv");
-  const salesPath = path.join(demoDir, "sales_demo_90d.csv");
+  const demoDir = process.env.DEMO_DATASET
+    ? path.resolve(process.env.DEMO_DATASET)
+    : path.resolve(__dirname, "../../samples/demo");
+  const fileSet = process.env.DEMO_DATASET
+    ? { products: "products.csv", inventory: "inventory.csv", sales: "sales.csv" }
+    : { products: "products_demo.csv", inventory: "inventory_demo.csv", sales: "sales_demo_90d.csv" };
+  const productsPath = path.join(demoDir, fileSet.products);
+  const inventoryPath = path.join(demoDir, fileSet.inventory);
+  const salesPath = path.join(demoDir, fileSet.sales);
 
   console.log(`Using API: ${API_BASE_URL}`);
   console.log(`Using demo dataset: ${demoDir}`);
@@ -136,7 +143,8 @@ async function main() {
     throw new Error("Timed out waiting for analysis completion");
   }
 
-  const alerts = await getPriorityAlerts();
+  const response = await getPriorityAlerts();
+  const alerts = Array.isArray(response) ? response : (response.alerts || []);
   const top5 = alerts.slice(0, 5);
 
   console.log(`\nTop ${top5.length} priority alerts:`);

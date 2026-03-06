@@ -3,6 +3,7 @@ const multer = require("multer");
 const { randomUUID } = require("crypto");
 const { query, withTransaction } = require("../db");
 const { parseCsvBuffer, toNumber } = require("../utils/csv");
+const { segregate } = require("../services/segregateCsv");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -35,6 +36,12 @@ router.post("/products", upload.single("file"), async (req, res, next) => {
     const failures = [];
     let success = 0;
     await withTransaction(async (client) => {
+      // Replace-all semantics: uploading products = new dataset. Clear all data so this run uses only current uploads.
+      await client.query("DELETE FROM alerts");
+      await client.query("DELETE FROM forecasts");
+      await client.query("DELETE FROM sales");
+      await client.query("DELETE FROM inventory");
+      await client.query("DELETE FROM products");
       for (let i = 0; i < rows.length; i += 1) {
         const row = rows[i];
         const sku = String(row.sku || "").trim();
@@ -154,6 +161,89 @@ router.post("/sales", upload.single("file"), async (req, res, next) => {
       }
     });
     return res.json(buildSummary("sales", rows.length, success, failures));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/** Single-file upload: analyze CSV and segregate into products, inventory, sales; replace DB with result. */
+router.post("/upload-combined", upload.single("file"), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "CSV file is required" });
+    const rows = parseCsvBuffer(req.file.buffer);
+    const result = segregate(rows);
+    if (result.errors && result.errors.length > 0) {
+      return res.status(400).json({
+        error: "Could not interpret CSV",
+        details: result.errors,
+        hint: "Supported: (1) Supermarket-style: Product line, Unit price, Quantity, Date, Total, Cost of goods sold, Invoice ID. (2) Sales with columns: sku, quantity, sale_date (and optional unit_price, total_amount, transaction_id).",
+      });
+    }
+    const { products: productsList, inventory: inventoryList, sales: salesList } = result;
+    if (!productsList.length || !salesList.length) {
+      return res.status(400).json({
+        error: "Segregation produced no products or no sales",
+        details: result.errors,
+      });
+    }
+
+    await withTransaction(async (client) => {
+      await client.query("DELETE FROM alerts");
+      await client.query("DELETE FROM forecasts");
+      await client.query("DELETE FROM sales");
+      await client.query("DELETE FROM inventory");
+      await client.query("DELETE FROM products");
+
+      for (const p of productsList) {
+        await client.query(
+          `INSERT INTO products (sku, name, category, supplier_id, cost_price, selling_price, supplier_lead_time_days)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name, category = EXCLUDED.category,
+             supplier_id = EXCLUDED.supplier_id, cost_price = EXCLUDED.cost_price,
+             selling_price = EXCLUDED.selling_price, supplier_lead_time_days = EXCLUDED.supplier_lead_time_days`,
+          [
+            p.sku,
+            p.name,
+            p.category,
+            p.supplier_id || "UNKNOWN",
+            p.cost_price,
+            p.selling_price,
+            p.supplier_lead_time_days ?? 7,
+          ]
+        );
+      }
+      for (const inv of inventoryList) {
+        await client.query(
+          `INSERT INTO inventory (sku, current_stock, snapshot_date) VALUES ($1, $2, $3)
+           ON CONFLICT (sku, snapshot_date) DO UPDATE SET current_stock = EXCLUDED.current_stock`,
+          [inv.sku, inv.current_stock, inv.snapshot_date]
+        );
+      }
+      for (const s of salesList) {
+        await client.query(
+          `INSERT INTO sales (transaction_id, sku, quantity, unit_price, total_amount, sale_date, channel)
+           VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (transaction_id) DO NOTHING`,
+          [
+            s.transaction_id,
+            s.sku,
+            s.quantity,
+            s.unit_price,
+            s.total_amount,
+            s.sale_date,
+            s.channel || "offline",
+          ]
+        );
+      }
+    });
+
+    return res.json({
+      ok: true,
+      format: result.format,
+      products: { totalRows: productsList.length, processedRows: productsList.length },
+      inventory: { totalRows: inventoryList.length, processedRows: inventoryList.length },
+      sales: { totalRows: salesList.length, processedRows: salesList.length },
+      message: `Segregated into ${productsList.length} products, ${inventoryList.length} inventory rows, ${salesList.length} sales. You can run analysis now.`,
+    });
   } catch (error) {
     return next(error);
   }
