@@ -5,7 +5,6 @@ import {
   runAnalysis,
   getAnalysisStatus,
   getPriorityAlerts,
-  downloadDemoSamples,
 } from './api'
 import './App.css'
 
@@ -23,13 +22,10 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [processingStepIndex, setProcessingStepIndex] = useState(0)
-  const [demoDownloading, setDemoDownloading] = useState(false)
-  const [demoDownloadError, setDemoDownloadError] = useState('')
 
   const handleFile = useCallback(async (key, file) => {
     if (!file) return
     setUploadError('')
-    setDemoDownloadError('')
     setError('')
     const endpoints = {
       products: '/api/data/products',
@@ -132,24 +128,9 @@ function App() {
               <li>
                 Download demo dataset or upload your own CSV files
                 <p className="hint demo-download-row">
-                  <button
-                    type="button"
-                    className="btn btn-demo"
-                    disabled={demoDownloading}
-                    onClick={async () => {
-                      setDemoDownloadError('')
-                      setDemoDownloading(true)
-                      try {
-                        await downloadDemoSamples()
-                      } catch (e) {
-                        setDemoDownloadError(e.message || 'Download failed')
-                      } finally {
-                        setDemoDownloading(false)
-                      }
-                    }}
-                  >
-                    {demoDownloading ? 'Downloading…' : 'Download demo dataset'}
-                  </button>
+                  <a href="/demo-dataset.zip" download className="btn btn-demo">
+                    Download demo dataset
+                  </a>
                   <span className="demo-download-hint">ZIP with sample shops (Shop A, Shop B, etc.)</span>
                 </p>
               </li>
@@ -204,7 +185,7 @@ function App() {
                 </div>
               </li>
             </ol>
-            {(uploadError || demoDownloadError) && <p className="error">{uploadError || demoDownloadError}</p>}
+            {(uploadError) && <p className="error">{uploadError}</p>}
           </section>
         )}
 

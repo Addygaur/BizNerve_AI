@@ -51,17 +51,4 @@ async function getForecastReorder() {
   return Array.isArray(data) ? data : [];
 }
 
-/** Download demo samples zip (samples folder with Shop A, Shop B, etc.) */
-async function downloadDemoSamples() {
-  const r = await fetch(`${API_BASE}/api/data/demo-samples`);
-  if (!r.ok) throw new Error('Demo dataset unavailable');
-  const blob = await r.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'samples.zip';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-export { checkHealth, uploadCsv, runAnalysis, getAnalysisStatus, getPriorityAlerts, getForecastBySku, getForecastReorder, downloadDemoSamples };
+export { checkHealth, uploadCsv, runAnalysis, getAnalysisStatus, getPriorityAlerts, getForecastBySku, getForecastReorder };
