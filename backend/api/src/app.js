@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const dataRoutes = require("./routes/data");
 const analysisRoutes = require("./routes/analysis");
 const forecastRoutes = require("./routes/forecast");
@@ -7,6 +8,11 @@ const healthRoutes = require("./routes/health");
 
 const app = express();
 
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type"],
+}));
 app.use(express.json({ limit: "1mb" }));
 
 app.use("/health", healthRoutes);
