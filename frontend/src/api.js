@@ -1,4 +1,7 @@
-const API_BASE = '';
+// In production (e.g. AWS), set VITE_API_ORIGIN to your backend URL so /api and /health
+// are requested from the correct host (e.g. http://44.200.47.3:8080). Leave empty when using
+// Vite dev proxy or when the same server proxies /api to the backend.
+const API_BASE = import.meta.env.VITE_API_ORIGIN ?? '';
 
 async function checkHealth() {
   const r = await fetch(`${API_BASE}/health`);
