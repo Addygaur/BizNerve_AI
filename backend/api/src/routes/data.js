@@ -1,5 +1,8 @@
+const path = require("path");
+const fs = require("fs");
 const express = require("express");
 const multer = require("multer");
+const archiver = require("archiver");
 const { randomUUID } = require("crypto");
 const { query, withTransaction } = require("../db");
 const { parseCsvBuffer, toNumber } = require("../utils/csv");
@@ -263,6 +266,25 @@ router.get("/summary", async (req, res, next) => {
     });
   } catch (error) {
     return next(error);
+  }
+});
+
+// Demo dataset: zip of samples folder (Shop A, Shop B, Shop C, etc.)
+const SAMPLES_DIR = process.env.SAMPLES_DIR || path.resolve(__dirname, "..", "..", "..", "..", "samples");
+router.get("/demo-samples", (req, res, next) => {
+  try {
+    if (!fs.existsSync(SAMPLES_DIR) || !fs.statSync(SAMPLES_DIR).isDirectory()) {
+      return res.status(404).json({ error: "Demo samples folder not found" });
+    }
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", 'attachment; filename="samples.zip"');
+    const archive = archiver("zip", { zlib: { level: 6 } });
+    archive.on("error", (err) => next(err));
+    archive.pipe(res);
+    archive.directory(SAMPLES_DIR, "samples");
+    archive.finalize();
+  } catch (error) {
+    next(error);
   }
 });
 

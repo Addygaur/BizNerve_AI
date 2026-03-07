@@ -1,0 +1,4 @@
+sku,name,category,supplier_id,cost_price,selling_price,supplier_lead_time_days
+MARG-A,Product A,Category1,SUP1,72,100,7
+MARG-B,Product B,Category1,SUP1,72,100,7
+MARG-C,Product C,Category2,SUP1,72,100,7

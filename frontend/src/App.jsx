@@ -5,6 +5,7 @@ import {
   runAnalysis,
   getAnalysisStatus,
   getPriorityAlerts,
+  downloadDemoSamples,
 } from './api'
 import './App.css'
 
@@ -22,10 +23,13 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [processingStepIndex, setProcessingStepIndex] = useState(0)
+  const [demoDownloading, setDemoDownloading] = useState(false)
+  const [demoDownloadError, setDemoDownloadError] = useState('')
 
   const handleFile = useCallback(async (key, file) => {
     if (!file) return
     setUploadError('')
+    setDemoDownloadError('')
     setError('')
     const endpoints = {
       products: '/api/data/products',
@@ -123,53 +127,84 @@ function App() {
       <main className="main">
         {step === 'upload' && (
           <section className="card upload-card">
-            <h2>1. Upload data</h2>
-            <p className="hint">Upload products, inventory, and sales data to run the AI analysis.</p>
-            {uploadError && <p className="error">{uploadError}</p>}
-            <div className="upload-grid">
-              <label className="upload-box">
-                <span className="upload-label">Products</span>
-                <input type="file" accept=".csv" onChange={(e) => handleFile('products', e.target.files?.[0])} />
-                {uploads.products ? (
-                  <span className="upload-result upload-done">
-                    ✓ Uploaded ({uploads.products.processedRows} rows)
-                  </span>
-                ) : (
-                  <span className="upload-result">CSV</span>
-                )}
-              </label>
-              <label className="upload-box">
-                <span className="upload-label">Inventory</span>
-                <input type="file" accept=".csv" onChange={(e) => handleFile('inventory', e.target.files?.[0])} />
-                {uploads.inventory ? (
-                  <span className="upload-result upload-done">
-                    ✓ Uploaded ({uploads.inventory.processedRows} rows)
-                  </span>
-                ) : (
-                  <span className="upload-result">CSV</span>
-                )}
-              </label>
-              <label className="upload-box">
-                <span className="upload-label">Sales</span>
-                <input type="file" accept=".csv" onChange={(e) => handleFile('sales', e.target.files?.[0])} />
-                {uploads.sales ? (
-                  <span className="upload-result upload-done">
-                    ✓ Uploaded ({uploads.sales.processedRows} rows)
-                  </span>
-                ) : (
-                  <span className="upload-result">CSV</span>
-                )}
-              </label>
-            </div>
-            <div className="actions">
-              <button
-                className="btn btn-primary"
-                disabled={!canRun || loading}
-                onClick={handleRunAnalysis}
-              >
-                {loading ? 'Starting…' : '2. Run analysis'}
-              </button>
-            </div>
+            <h2>Upload data</h2>
+            <ol className="upload-steps-list">
+              <li>
+                Download demo dataset or upload your own CSV files
+                <p className="hint demo-download-row">
+                  <button
+                    type="button"
+                    className="btn btn-demo"
+                    disabled={demoDownloading}
+                    onClick={async () => {
+                      setDemoDownloadError('')
+                      setDemoDownloading(true)
+                      try {
+                        await downloadDemoSamples()
+                      } catch (e) {
+                        setDemoDownloadError(e.message || 'Download failed')
+                      } finally {
+                        setDemoDownloading(false)
+                      }
+                    }}
+                  >
+                    {demoDownloading ? 'Downloading…' : 'Download demo dataset'}
+                  </button>
+                  <span className="demo-download-hint">ZIP with sample shops (Shop A, Shop B, etc.)</span>
+                </p>
+              </li>
+              <li>
+                Upload Products → Inventory → Sales
+                <div className="upload-grid">
+                  <label className="upload-box">
+                    <span className="upload-label">Products</span>
+                    <input type="file" accept=".csv" onChange={(e) => handleFile('products', e.target.files?.[0])} />
+                    {uploads.products ? (
+                      <span className="upload-result upload-done">
+                        ✓ Uploaded ({uploads.products.processedRows} rows)
+                      </span>
+                    ) : (
+                      <span className="upload-result">CSV</span>
+                    )}
+                  </label>
+                  <label className="upload-box">
+                    <span className="upload-label">Inventory</span>
+                    <input type="file" accept=".csv" onChange={(e) => handleFile('inventory', e.target.files?.[0])} />
+                    {uploads.inventory ? (
+                      <span className="upload-result upload-done">
+                        ✓ Uploaded ({uploads.inventory.processedRows} rows)
+                      </span>
+                    ) : (
+                      <span className="upload-result">CSV</span>
+                    )}
+                  </label>
+                  <label className="upload-box">
+                    <span className="upload-label">Sales</span>
+                    <input type="file" accept=".csv" onChange={(e) => handleFile('sales', e.target.files?.[0])} />
+                    {uploads.sales ? (
+                      <span className="upload-result upload-done">
+                        ✓ Uploaded ({uploads.sales.processedRows} rows)
+                      </span>
+                    ) : (
+                      <span className="upload-result">CSV</span>
+                    )}
+                  </label>
+                </div>
+              </li>
+              <li>
+                Click Run analysis to generate AI alerts
+                <div className="actions">
+                  <button
+                    className="btn btn-primary"
+                    disabled={!canRun || loading}
+                    onClick={handleRunAnalysis}
+                  >
+                    {loading ? 'Starting…' : 'Run analysis'}
+                  </button>
+                </div>
+              </li>
+            </ol>
+            {(uploadError || demoDownloadError) && <p className="error">{uploadError || demoDownloadError}</p>}
           </section>
         )}
 

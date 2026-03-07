@@ -92,6 +92,29 @@ function segregate(rows) {
     });
   }
 
+  // UK Online Retail (UCI/IBM): InvoiceNo, StockCode, Description, Quantity, InvoiceDate, UnitPrice, CustomerID, Country
+  const stockCodeCol = h.get("stockcode") || h.get("stock_code") || "StockCode";
+  const descCol = h.get("description") || "Description";
+  const invDateCol = h.get("invoicedate") || h.get("invoice_date") || "InvoiceDate";
+  const invNoCol = h.get("invoiceno") || h.get("invoice_no") || "InvoiceNo";
+  const hasOnlineRetail =
+    first[stockCodeCol] != null &&
+    first[descCol] != null &&
+    (first[quantityCol] != null || first["Quantity"] != null) &&
+    first[invDateCol] != null &&
+    (first[unitPriceCol] != null || first["UnitPrice"] != null);
+
+  if (hasOnlineRetail) {
+    return segregateOnlineRetail(rows, {
+      stockCode: stockCodeCol,
+      description: descCol,
+      quantity: quantityCol || "Quantity",
+      invoiceDate: invDateCol,
+      unitPrice: unitPriceCol || "UnitPrice",
+      invoiceNo: invNoCol,
+    });
+  }
+
   // Already has sku + quantity + sale_date? Treat as sales-only and derive products
   const hasSku = h.has("sku");
   const hasSaleDate = h.has("sale_date") || h.has("saledate") || h.has("date");
@@ -100,8 +123,74 @@ function segregate(rows) {
     return segregateSalesOnly(rows, getHeaderMap(first));
   }
 
-  errors.push("Could not detect CSV format. Expected: supermarket-style (Product line, Unit price, Quantity, Date, Total) or sales with sku, quantity, sale_date.");
+  errors.push("Could not detect CSV format. Expected: supermarket-style (Product line, Unit price, Quantity, Date, Total) or UK Online Retail (StockCode, Description, Quantity, InvoiceDate, UnitPrice) or sales with sku, quantity, sale_date.");
   return { format: "unknown", products: [], inventory: [], sales: [], errors };
+}
+
+function parseDateTime(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  const datePart = s.split(/\s+/)[0] || s;
+  return parseDate(datePart);
+}
+
+function segregateOnlineRetail(rows, cols) {
+  const productBySku = new Map();
+  const sales = [];
+
+  for (let idx = 0; idx < rows.length; idx += 1) {
+    const row = rows[idx];
+    const sku = String(row[cols.stockCode] || "").trim();
+    const description = String(row[cols.description] || "").trim();
+    const quantity = parseInt(row[cols.quantity], 10);
+    const unitPrice = parseFloat(row[cols.unitPrice]) || 0;
+    const invoiceNo = String(row[cols.invoiceNo] || "").trim();
+    const date = parseDateTime(row[cols.invoiceDate]);
+    if (!sku || !description || !quantity || quantity <= 0 || unitPrice <= 0 || !date) continue;
+
+    if (!productBySku.has(sku)) {
+      productBySku.set(sku, {
+        sku,
+        name: description,
+        category: "Giftware",
+        supplier_id: "SUP-1",
+        cost_price: Number((unitPrice * 0.7).toFixed(2)),
+        selling_price: Number(unitPrice.toFixed(2)),
+        supplier_lead_time_days: 7,
+      });
+    }
+
+    const total = quantity * unitPrice;
+    sales.push({
+      transaction_id: invoiceNo ? `${invoiceNo}-${idx}` : `tx-${idx + 1}`,
+      sku,
+      quantity,
+      unit_price: unitPrice,
+      total_amount: Number(total.toFixed(2)),
+      sale_date: date,
+      channel: "online",
+    });
+  }
+
+  const products = Array.from(productBySku.values());
+  const snapshotDate = new Date().toISOString().slice(0, 10);
+  const qtyBySku = new Map();
+  for (const s of sales) {
+    qtyBySku.set(s.sku, (qtyBySku.get(s.sku) || 0) + s.quantity);
+  }
+  const inventory = products.map((p) => ({
+    sku: p.sku,
+    current_stock: Math.max(0, Math.min(200, Math.floor((qtyBySku.get(p.sku) || 0) * 0.25) + 15)),
+    snapshot_date: snapshotDate,
+  }));
+
+  return {
+    format: "online_retail",
+    products,
+    inventory,
+    sales,
+    errors: [],
+  };
 }
 
 function segregateSupermarket(rows, cols) {

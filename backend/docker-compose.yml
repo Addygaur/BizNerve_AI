@@ -52,8 +52,11 @@ services:
       MARGIN_EROSION_MAX_REVENUE_GROWTH_PCT: ${MARGIN_EROSION_MAX_REVENUE_GROWTH_PCT:-5}
       MARGIN_ALERT_ONLY_FROM_DAY: ${MARGIN_ALERT_ONLY_FROM_DAY:-25}
       UPLOAD_LIMIT_MB: ${UPLOAD_LIMIT_MB:-10}
+      SAMPLES_DIR: /app/samples
     ports:
       - "8080:8080"
+    volumes:
+      - ../samples:/app/samples
     depends_on:
       db:
         condition: service_healthy
