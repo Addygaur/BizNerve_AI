@@ -14,7 +14,7 @@ BizNerve AI helps shop owners:
 
 ## Live Demo
 
-http://44.200.47.3:4173/, sometimes the site doesnt work, due to hosting issues.
+http://44.200.47.3:4173/
 
 Proposed architecture uses AWS cloud infrastructure and Prophet time-series forecasting.
 
